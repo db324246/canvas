@@ -74,12 +74,15 @@
     drawRubber(rubberOptions)
 
     const colorOptions = {
-      x: 300,
-      y: 10,
+      ctx: toolsCtx, // canvas2d对象
+      x: 500,
+      y: 7,
       width: 15,
-      colorArr: [],
+      diatance: 5,
+      colorArr: ['#000000', '#ffffff', '#C3C3C3', '#7F7F7F', '#880015', '#ED1C24', '#FF7F27', '#FFF200', '#22B14C', '#00A2E8', '#3F48CC', '#A349A4', '#B97A57', '#FFAEC9', '#FFC90E', '#EFE4B0', '#B5E61D', '#99D9EA', '#7092BE', '#C8BFE7'],
       count: 20
     }
+    colourDisk(colorOptions)
   }
 
   function drawPencil({ ctx, x, y, nibLength, width, length, color }) {
@@ -169,8 +172,19 @@
     ctx.stroke(cardboard)
   }
   
-  function colourDisk({x, y, width, colorArr, count}) {
-
+  function colourDisk({ ctx, x, y, width, diatance, colorArr, count }) {
+    for (let i = 0; i < count; i++) {
+      ctx.fillStyle = colorArr[i] || '#fff';
+      ctx.strokeStyle = '#666';
+      
+      if (i > (count / 2 - 1)) {
+        ctx.fillRect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
+        ctx.strokeRect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
+      } else {
+        ctx.fillRect(x + i * (width + diatance), y, width, width)
+        ctx.strokeRect(x + i * (width + diatance), y, width, width)
+      }
+    }
   }
   // const canvas = document.getElementById('canvas');
   // const offsetX = drawBox.offsetLeft
