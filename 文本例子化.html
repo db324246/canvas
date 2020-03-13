@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <style>
+    div {
+      margin: 100px 0 0 500px;
+    }
+    #mycanvas {
+      margin: 50px 0 0 500px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <input type="text">
+    <button>发射</button>
+  </div>
+  <canvas id="mycanvas" width="600" height="400"></canvas>
+</body>
+<script>
+  const input = document.querySelector("input");
+  const btn = document.querySelector("button");
+  const canvas = document.querySelector("#mycanvas");
+  var ctx = canvas.getContext('2d');
+
+  var distance = 5
+
+  function easeInOutCubic(t, b, c, d) {
+    if ((t/=d/2) < 1) return c/2*t*t*t + b;
+    return c/2*((t-=2)*t*t + 2) + b;
+  }
+
+  ctx.fillStyle = 'rgb(243, 15, 15)';
+  ctx.font = '160px SimSun, Songti SC';
+  btn.addEventListener("click", function() {
+    var dotArr = []
+    let text = input.value;
+    // dotArr = [];
+    console.log(text)
+    ctx.textAlign = 'center';
+    ctx.beginPath()
+    ctx.fillText(text, 300, 200)
+    const imgData = ctx.getImageData(0, 0, 600, 400).data;
+    console.log(imgData)
+    ctx.clearRect(0, 0, 600, 400)
+
+    let width = canvas.width;
+    let height = canvas.height;
+
+    for (let x = 0; x < width; x += distance) {
+      for (let y = 0; y < height; y += distance) {
+        let i = ((y * canvas.width) + x) * 4;
+        
+        console.log(i)
+        if (imgData[i] === 243) {
+
+          dotArr.push(new Dot(x, y))
+
+        }
+      }
+    }
+    
+    for (let i = 0; i < dotArr.length; i++) {
+      ctx.save()
+      ctx.beginPath();
+      ctx.arc(dotArr[i].x, dotArr[i].y, dotArr[i].r, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.restore()
+    }
+  })
+
+  function Dot(x, y, r) {
+    this.x = x,
+    this.y = y,
+    this.frameNum = 0;
+    this.frameCount =  Math.ceil(3000 / 16.66);
+    this.r = 2
+  }
+  
+</script>
+</html>

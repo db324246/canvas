@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #drawBox {
+      width: 800px;
+      margin: 50px auto;
+      border: 1px solid #ccc;
+    }
+    #drawBox>canvas {
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div id="drawBox">
+    <canvas id='canvas' width='800' height='450'>
+      您的浏览器不支持 canvas
+    </canvas>
+    <canvas id='tools' width='800' height='50'>
+      您的浏览器不支持 canvas
+    </canvas>
+  </div>
+</body>
+<script>
+  // 画板
+  const drawBox = document.getElementById('drawBox');
+
+  // 画布
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // 画板工具栏
+  const tools = document.getElementById('tools');
+  const toolsCtx = tools.getContext('2d');
+  tools.style.borderTop = '1px solid #ccc';
+  
+  console.log('ctx', ctx)
+  console.log('toolsCtx', toolsCtx)
+  toolsInit()
+  function toolsInit() {
+    toolsCtx.strokeStyle = '#000';
+    toolsCtx.lineWidth = 1;
+    toolsCtx.strokeRect(20, 10, 30, 30)
+    const pencilOptions = {
+      ctx: toolsCtx, // canvas2d对象
+      x: 25, // 铅笔的落点x坐标
+      y: 35, // 铅笔的落点y坐标
+      nibLength: 8, // 笔尖的长度
+      width: 3, // 铅笔的一半宽度
+      length: 18, // 笔杆的长度
+      color: '#b78c8c' // 铅笔颜色
+    }
+    drawPencil(pencilOptions)
+
+    toolsCtx.strokeStyle = '#000';
+    toolsCtx.lineWidth = 1;
+    toolsCtx.strokeRect(60, 10, 30, 30)
+    const rubberOptions = {
+      ctx: toolsCtx, // canvas2d对象
+      x: 68, // 橡皮的落点x坐标
+      y: 33, // 橡皮的落点y坐标
+      nibLength: 3, // 橡皮尖的长度
+      width: 4.5, // 橡皮的一半宽度
+      height: 5, // 橡皮的厚度
+      length: 15, // 橡皮的长度
+      outlength: 5, // 橡皮露出纸壳的长度
+      color: '#9e9a9a', // 橡皮纸壳的颜色
+      cbColor: '#b78c8c' // 橡皮纸壳的颜色
+    }
+    drawRubber(rubberOptions)
+
+    const colorOptions = {
+      x: 300,
+      y: 10,
+      width: 15,
+      colorArr: [],
+      count: 20
+    }
+  }
+
+  function drawPencil({ ctx, x, y, nibLength, width, length, color }) {
+    const sin = function(range) {
+      return Math.sin(Math.PI * range / 180)
+    }
+    const cos = function(range) {
+      return Math.cos(Math.PI * range / 180)
+    }
+
+    const point = {
+      x: x + cos(-45) * nibLength,
+      y: y + sin(-45) * nibLength,
+    }
+    ctx.strokeStyle = color;
+
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(point.x + cos(45) * width, point.y + sin(45) * width)
+    ctx.lineTo(point.x + cos(-135) * width, point.y + sin(-135) * width)
+    ctx.closePath()
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.lineWidth = width * 2 + 1;
+    ctx.moveTo(point.x, point.y)
+    ctx.lineTo(point.x + cos(-45) * length / 2, point.y + sin(-45) * length / 2)
+    ctx.stroke()
+    
+    ctx.beginPath()
+    ctx.moveTo(point.x + cos(-45) * length / 2, point.y + sin(-45) * length / 2)
+    ctx.lineCap = 'round';
+    ctx.lineTo(point.x + cos(-45) * length / 2 + cos(-45) * length / 2, point.y + sin(-45) * length / 2 + sin(-45) * length / 2)
+    ctx.stroke()
+  }
+
+  function drawRubber({ ctx, x, y, nibLength, width, height, length, outlength, color, cbColor }) {
+    const sin = function(range) {
+      return Math.sin(Math.PI * range / 180)
+    }
+    const cos = function(range) {
+      return Math.cos(Math.PI * range / 180)
+    }
+
+    const cardboard = new Path2D()
+    ctx.strokeStyle = color
+
+    ctx.beginPath()
+    ctx.moveTo(x + cos(45) * width, y + sin(45) * width)
+    const point = { // 纸壳点
+      x: x + cos(45) * width + (nibLength + outlength) * cos(-45),
+      y: y + sin(45) * width + (nibLength + outlength) * sin(-45)
+    }
+    ctx.lineTo(point.x, point.y)
+    ctx.lineTo(point.x, point.y - height)
+    ctx.lineTo(point.x + cos(135) * outlength, point.y - height + sin(135) * outlength)
+    ctx.closePath()
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.moveTo(x + cos(45) * width, y + sin(45) * width)
+    ctx.lineTo(x + cos(-135) * width, y + sin(-135) * width)
+    ctx.lineTo(point.x + cos(135) * outlength + cos(-135) * width * 2, point.y - height + sin(135) * outlength + sin(-135) * width * 2)
+    ctx.lineTo(point.x + cos(-135) * width * 2, point.y - height + sin(-135) * width * 2)
+    ctx.lineTo(point.x, point.y - height)
+    ctx.stroke()
+    
+    ctx.beginPath()
+    ctx.moveTo(point.x + cos(135) * outlength + cos(-135) * width * 2, point.y - height + sin(135) * outlength + sin(-135) * width * 2)
+    ctx.lineTo(point.x + cos(135) * outlength, point.y - height + sin(135) * outlength)
+    ctx.stroke()
+
+    cardboard.moveTo(point.x, point.y)
+    cardboard.lineTo(point.x + (length - outlength) * cos(-45) , point.y + (length - outlength) * sin(-45))
+    cardboard.lineTo(point.x + (length - outlength) * cos(-45) , point.y + (length - outlength) * sin(-45) - height)
+    cardboard.lineTo(point.x, point.y - height)
+    cardboard.closePath()
+    
+    cardboard.moveTo(point.x, point.y - height)
+    cardboard.lineTo(point.x + cos(-135) * width * 2, point.y - height + sin(-135) * width * 2)
+    cardboard.lineTo(point.x + (length - outlength) * cos(-45) + cos(-135) * width * 2, point.y + (length - outlength) * sin(-45) - height + sin(-135) * width * 2)
+    cardboard.lineTo(point.x + (length - outlength) * cos(-45) , point.y + (length - outlength) * sin(-45) - height)
+    cardboard.closePath()
+
+    ctx.fillStyle = cbColor
+    ctx.fill(cardboard)
+    ctx.stroke(cardboard)
+  }
+  
+  function colourDisk({x, y, width, colorArr, count}) {
+
+  }
+  // const canvas = document.getElementById('canvas');
+  // const offsetX = drawBox.offsetLeft
+  // const offsetY = drawBox.offsetTop
+
+  // // canvas 事件
+  // canvas.addEventListener('mousedown', e => {
+  //   if (this.setCapture) this.setCapture()
+
+  //   const x = e.pageX - offsetX, y = e.pageY - offsetY;
+  //   ctx.beginPath();
+  //   ctx.moveTo(x, y);
+
+  //   window.addEventListener('mousemove', mousemove)
+
+  //   window.addEventListener('mouseup', mouseup)
+  // })
+
+
+
+
+  // function mousemove(event) {
+  //   const toX = event.pageX - offsetX, toY = event.pageY - offsetY;
+  //   ctx.lineTo(toX, toY);
+  //   ctx.stroke()
+  // }
+  // function mouseup(event) {
+  //   window.removeEventListener('mousemove', mousemove)
+  //   window.removeEventListener('mouseup', mouseup)
+  //   if (canvas.releaseCapture) canvas.releaseCapture()
+  // }
+</script>
+</html>

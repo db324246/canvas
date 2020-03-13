@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <canvas id='canvas' width='500' height='300'>
+    您的浏览器不支持 canvas
+  </canvas>
+</body>
+<script>
+  const canvas = document.querySelector('#canvas');
+  const ctx = canvas.getContext('2d');
+
+  const point = {
+    x: 100,
+    y: 100
+  }
+  const offset = 15, length = 10;
+  const distance = 30
+  
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round'
+  console.log(Math.cos(0)) // 1
+  console.log(Math.sin(0)) // 0
+  // 注意，根据三角函数的算法，第一次绘制在三点钟方向上
+
+  const time = 360 / distance;
+  let range = 0;
+
+  setInterval(() => {
+    ctx.clearRect(0, 0, 500, 300)
+    draw(range)
+    range += distance;
+    if (range > 360) range = distance
+  }, 50)
+
+  function draw(range) {
+    let _range = range
+
+    for (let i = 0; i < time; i++) {
+      // 根据正余弦三角函数，距离圆心的偏移值可作为斜边的边长，这样即可算出x，y 的偏移坐标
+      const sin = Math.sin(Math.PI * _range / 180)
+      const cos = Math.cos(Math.PI * _range / 180)
+      
+      ctx.beginPath()
+      ctx.moveTo(point.x + offset * cos, point.y + offset * sin)
+      ctx.lineTo(point.x + (offset + length) * cos, point.y + (offset + length) * sin)
+      ctx.strokeStyle = 'rgba(0,0,0,'+ (0.25 + 0.75 * (i + 1) / time) +')';
+      ctx.stroke();
+      _range += distance
+      if (_range > 360) _range = distance
+    }
+  }
+
+</script>
+</html>
