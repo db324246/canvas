@@ -6,6 +6,7 @@
   <title>Document</title>
   <style>
     #drawBox {
+      position: relative;
       width: 800px;
       margin: 50px auto;
       border: 1px solid #ccc;
@@ -13,10 +14,22 @@
     #drawBox>canvas {
       vertical-align: middle;
     }
+    #desk {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    #canvas, #tools {
+      position: relative;
+      z-index: 100;
+    }
   </style>
 </head>
 <body>
   <div id="drawBox">
+    <canvas id='desk' width='800' height='500'>
+      您的浏览器不支持 canvas
+    </canvas>
     <canvas id='canvas' width='800' height='450'>
       您的浏览器不支持 canvas
     </canvas>
@@ -29,6 +42,10 @@
   // 画板
   const drawBox = document.getElementById('drawBox');
 
+  // 底层画布
+  const desk = document.getElementById('desk');
+  const deskCtx = desk.getContext('2d');
+
   // 画布
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -36,29 +53,116 @@
   // 画板工具栏
   const tools = document.getElementById('tools');
   const toolsCtx = tools.getContext('2d');
-  tools.style.borderTop = '1px solid #ccc';
+
+  // 全局变量
+  let currentColor = '#000'; // 当前的颜色
+  let currentline = 1; // 当前的线宽
+  let currentTool = 'pencil'; // line: 设置线宽, pencil: 铅笔, rubber: 橡皮
+
+  let colourDiskArr = []; // 存储色盘path的数组
+  let lineWidthArr = []; // 存储线宽path的数组
+  let mouseRubberPath = {};
+  let pencilPath = new Path2D, rubberPath = new Path2D, linePath = new Path2D(); // 存储铅笔、橡皮、线宽点击选择的path
   
-  console.log('ctx', ctx)
-  console.log('toolsCtx', toolsCtx)
+  // 画布桌面初始化
+  deskInit()
+
+  // 工具栏初始化
   toolsInit()
+
+  // 画布初始化
+  canvasInit()
+
+  function canvasInit() {
+
+    canvas.addEventListener('mousedown', e => {
+      const x = e.offsetX, y = e.offsetY;
+
+      switch (currentTool) {
+        case 'pencil':
+          ctx.strokeStyle = currentColor;
+          ctx.lineWidth = currentline;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          canvas.addEventListener('mousemove', drawPicture)
+          canvas.addEventListener('mouseup', () => {
+            canvas.removeEventListener('mousemove', drawPicture)
+          })
+          break;
+        case 'rubber':
+          ctx.clearRect(mouseRubberPath.x, mouseRubberPath.y, mouseRubberPath.width, mouseRubberPath.height)
+          canvas.addEventListener('mousemove', rubPicture)
+          canvas.addEventListener('mouseup', () => {
+            canvas.removeEventListener('mousemove', rubPicture)
+          })
+          break;
+        case 'line':
+          const lineWidth = lineWidthArr.filter(item => deskCtx.isPointInPath(item.path, x, y))[0] ? lineWidthArr.filter(item => deskCtx.isPointInPath(item.path, x, y))[0].lineWidth : 1
+
+          drawLineWidth(lineWidth)
+          break;
+      }
+    })
+  }
+
+  function deskInit() {
+    window.addEventListener('mousemove', function(e) {
+      deskCtx.clearRect(0, 0, desk.width, desk.height)
+      canvas.style.cursor = 'auto';
+
+      if (e.pageX > drawBox.offsetLeft && e.pageX < drawBox.offsetLeft + drawBox.offsetWidth && e.pageY > drawBox.offsetTop && e.pageY < drawBox.offsetTop + canvas.height) {
+        const x = e.pageX - drawBox.offsetLeft;
+        const y = e.pageY - drawBox.offsetTop;
+        
+        if (currentTool === 'pencil') {
+          const pencilOption = {
+            ctx: deskCtx,
+            x,
+            y: y - 3
+          }
+          canvas.style.cursor = 'none';
+          drawPencil(pencilOption)
+        }
+        else if (currentTool === 'line') lineWidthSetting()
+        else if (currentTool === 'rubber') {
+          canvas.style.cursor = 'none';
+          mouseRubber({ x, y })
+        }
+      } 
+      else if (currentTool === 'line') lineWidthSetting()
+    })
+  }
+
   function toolsInit() {
+    toolsCtx.beginPath()
+    toolsCtx.moveTo(0 , 0 )
+    toolsCtx.lineTo(tools.width, 0 )
+    toolsCtx.strokeStyle = '#ccc';
+    toolsCtx.stroke()
+
     toolsCtx.strokeStyle = '#000';
-    toolsCtx.lineWidth = 1;
-    toolsCtx.strokeRect(20, 10, 30, 30)
+    toolsCtx.fillStyle = '#fff';
+    pencilPath.rect(20, 10, 30, 30)
+    toolsCtx.stroke(pencilPath)
+    toolsCtx.fill(pencilPath)
     const pencilOptions = {
       ctx: toolsCtx, // canvas2d对象
       x: 25, // 铅笔的落点x坐标
       y: 35, // 铅笔的落点y坐标
-      nibLength: 8, // 笔尖的长度
-      width: 3, // 铅笔的一半宽度
-      length: 18, // 笔杆的长度
-      color: '#b78c8c' // 铅笔颜色
+      // nibLength: 8, // 笔尖的长度
+      // width: 3, // 铅笔的一半宽度
+      // length: 18, // 笔杆的长度
+      // color: '#b78c8c' // 铅笔颜色
     }
     drawPencil(pencilOptions)
 
     toolsCtx.strokeStyle = '#000';
+    toolsCtx.fillStyle = '#fff';
     toolsCtx.lineWidth = 1;
-    toolsCtx.strokeRect(60, 10, 30, 30)
+    rubberPath.rect(60, 10, 30, 30)
+    toolsCtx.stroke(rubberPath)
+    toolsCtx.fill(rubberPath)
     const rubberOptions = {
       ctx: toolsCtx, // canvas2d对象
       x: 68, // 橡皮的落点x坐标
@@ -73,9 +177,11 @@
     }
     drawRubber(rubberOptions)
 
+    drawLineWidth(1)
+
     const colorOptions = {
       ctx: toolsCtx, // canvas2d对象
-      x: 500,
+      x: 550,
       y: 7,
       width: 15,
       diatance: 5,
@@ -83,9 +189,52 @@
       count: 20
     }
     colourDisk(colorOptions)
+
+    refreshCurrentColor({ color: currentColor})
+
+    drawBox.addEventListener('mousemove', function(e) {
+      const x = e.offsetX, y = e.offsetY;
+      tools.style.cursor = 'auto';
+
+      if (toolsCtx.isPointInPath(pencilPath, x, y)) return tools.style.cursor = 'pointer';
+      if (toolsCtx.isPointInPath(rubberPath, x, y)) return tools.style.cursor = 'pointer';
+      if (toolsCtx.isPointInPath(linePath, x, y)) return tools.style.cursor = 'pointer';
+
+      for (let i = 0; i < colourDiskArr.length; i++) {
+        if (toolsCtx.isPointInPath(colourDiskArr[i].path, x, y)) return tools.style.cursor = 'pointer';
+      }
+    })
+
+    tools.addEventListener('click', function(e) {
+      const x = e.offsetX, y = e.offsetY;
+
+      if (toolsCtx.isPointInPath(pencilPath, x, y)) {
+        console.log('画铅笔')  
+        return currentTool = 'pencil'
+      }
+
+      if (toolsCtx.isPointInPath(rubberPath, x, y)) {
+        console.log('画橡皮')
+        return currentTool = 'rubber'
+      }
+
+      if (toolsCtx.isPointInPath(linePath, x, y)) {
+        console.log('设置线宽')
+        currentTool = 'line';
+        lineWidthSetting()
+        return 
+      }
+
+      for (let i = 0; i < colourDiskArr.length; i++) {
+        if (toolsCtx.isPointInPath(colourDiskArr[i].path, x, y)) {
+          refreshCurrentColor({ color: colourDiskArr[i].color })
+          break
+        }
+      }
+    })
   }
 
-  function drawPencil({ ctx, x, y, nibLength, width, length, color }) {
+  function drawPencil({ ctx, x, y, nibLength = 8, width = 3, length = 18, color = '#b78c8c' }) {
     const sin = function(range) {
       return Math.sin(Math.PI * range / 180)
     }
@@ -97,6 +246,8 @@
       x: x + cos(-45) * nibLength,
       y: y + sin(-45) * nibLength,
     }
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'butt';
     ctx.strokeStyle = color;
 
     ctx.beginPath()
@@ -174,47 +325,122 @@
   
   function colourDisk({ ctx, x, y, width, diatance, colorArr, count }) {
     for (let i = 0; i < count; i++) {
+      const path = new Path2D()
       ctx.fillStyle = colorArr[i] || '#fff';
       ctx.strokeStyle = '#666';
       
       if (i > (count / 2 - 1)) {
-        ctx.fillRect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
-        ctx.strokeRect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
+        path.rect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
+        // path.strokeRect(x + (i -(count / 2)) * (width + diatance), y + width + diatance, width, width)
       } else {
-        ctx.fillRect(x + i * (width + diatance), y, width, width)
-        ctx.strokeRect(x + i * (width + diatance), y, width, width)
+        path.rect(x + i * (width + diatance), y, width, width)
+        // path.strokeRect(x + i * (width + diatance), y, width, width)
       }
+
+      colourDiskArr.push({
+        path,
+        color: colorArr[i]
+      })
+      ctx.stroke(path)
+      ctx.fill(path)
     }
   }
-  // const canvas = document.getElementById('canvas');
-  // const offsetX = drawBox.offsetLeft
-  // const offsetY = drawBox.offsetTop
+  
+  function drawLineWidth(lineWidth) { 
+    let x = 100, y = 25;
+    toolsCtx.clearRect(x - 5, 5, 50, 40)
+    currentline = lineWidth;
 
-  // // canvas 事件
-  // canvas.addEventListener('mousedown', e => {
-  //   if (this.setCapture) this.setCapture()
+    toolsCtx.strokeStyle = '#000';
+    toolsCtx.fillStyle = '#fff';
+    toolsCtx.lineWidth = 1;
+    linePath.rect(x, 10, 40, 30)
+    toolsCtx.stroke(linePath)
+    toolsCtx.fill(linePath)
+    
+    if (lineWidth === 1) {
+      x += 0.5;
+      y += 0.5;
+    }
+    toolsCtx.lineWidth = lineWidth
+    toolsCtx.beginPath()
+    toolsCtx.moveTo(x + 5, y)
+    toolsCtx.lineTo(x + 35, y)
+    toolsCtx.stroke()
+  }
 
-  //   const x = e.pageX - offsetX, y = e.pageY - offsetY;
-  //   ctx.beginPath();
-  //   ctx.moveTo(x, y);
+  function lineWidthSetting() {
+    deskCtx.clearRect(0, 0, deskCtx.width, deskCtx.height)
+    
+    deskCtx.lineCap = 'butt';
+    deskCtx.lineWidth = 1;
+    deskCtx.strokeStyle = '#000';
+    deskCtx.fillStyle = '#fff';
+    deskCtx.strokeRect(100, 380, 40, 60)
+    deskCtx.fillRect(100, 380, 40, 60)
 
-  //   window.addEventListener('mousemove', mousemove)
+    const lineArr = [1, 3, 6]
 
-  //   window.addEventListener('mouseup', mouseup)
-  // })
+    for (let i = 0; i < lineArr.length; i++) {
+      const path = new Path2D()
+      deskCtx.beginPath()
+      deskCtx.strokeStyle = '#000';
+      if (i === 0) {
+        deskCtx.moveTo(105, 380 + 10)
+        deskCtx.lineTo(135, 380 + 10)
+      } else {
+        deskCtx.moveTo(105, 380 + 10 + 20 * i)
+        deskCtx.lineTo(135, 380 + 10 + 20 * i)
+      }
+      deskCtx.lineWidth = lineArr[i];
+      deskCtx.stroke()
 
+      path.rect(102, 382 + 20 * i, 36, 16 )
+      deskCtx.strokeStyle = '#666';
+      deskCtx.lineWidth = 1;
+      deskCtx.stroke(path)
 
+      lineWidthArr.push({
+        path,
+        lineWidth: lineArr[i]
+      })
+    }
+  }
 
+  function mouseRubber({ x, y, width = 30, height = 30 }) {
+    const pointX = x - width / 2, pointY = y - height / 2;
 
-  // function mousemove(event) {
-  //   const toX = event.pageX - offsetX, toY = event.pageY - offsetY;
-  //   ctx.lineTo(toX, toY);
-  //   ctx.stroke()
-  // }
-  // function mouseup(event) {
-  //   window.removeEventListener('mousemove', mousemove)
-  //   window.removeEventListener('mouseup', mouseup)
-  //   if (canvas.releaseCapture) canvas.releaseCapture()
-  // }
+    const path = new Path2D();
+
+    deskCtx.strokeStyle = '#000';
+    deskCtx.fillStyle = '#fff';
+    deskCtx.lineWidth = 1;
+    path.rect(pointX, pointY, width, height);
+    mouseRubberPath.x = pointX;
+    mouseRubberPath.y = pointY;
+    mouseRubberPath.width = width;
+    mouseRubberPath.height = height;
+    deskCtx.stroke(path)
+    deskCtx.fill(path)
+  }
+
+  function refreshCurrentColor({ctx = toolsCtx, x = 500, y = 10, width = 20, height = 20, color}) {
+    ctx.strokeStyle = '#666';
+    ctx.fillStyle = color;
+    ctx.strokeRect(x, y, width, height)
+    ctx.fillRect(x, y, width, height)
+    currentColor = color;
+  }
+
+  function drawPicture(event) {
+    const toX = event.offsetX, toY = event.offsetY;
+    ctx.lineTo(toX, toY)
+    ctx.stroke()
+  }
+
+  function rubPicture(event) {
+    ctx.clearRect(mouseRubberPath.x, mouseRubberPath.y, mouseRubberPath.width, mouseRubberPath.height)
+  }
+
 </script>
 </html>
